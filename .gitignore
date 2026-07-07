@@ -37,3 +37,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Local agent guidance — kept on disk, not published
+CLAUDE.md
