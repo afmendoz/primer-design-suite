@@ -7,6 +7,11 @@ name = "primer-design-suite"
 version = "0.1.0"
 description = "ML-driven primer / assay design: predictor flagship + LLM copilot over a shared core."
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+]
 dependencies = [
     "primer3-py",
     "biopython",
