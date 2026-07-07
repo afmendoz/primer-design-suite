@@ -1,11 +1,11 @@
-"""Prediction stage: trained model + new candidates -> predicted efficiency.
+"""Prediction stage: trained model + feature table -> predicted efficiency.
 
-This is the pipeline-side counterpart to ``primer_core.tools.score.
-score_candidate`` — the same trained model artifact is loaded and applied
-here for batch scoring outside the agent context.
+This is the pipeline-side counterpart to
+``primer_core.tools.score.score_candidate`` — the same joblib artifact is
+loaded and applied here for batch scoring outside the agent context, using
+the artifact's ``feature_names`` to select and order columns.
 
-CLI-able: intended to be invoked directly or via
-``predictor/workflows/Snakefile``.
+CLI-able: invoked directly or via ``predictor/workflows/Snakefile``.
 """
 
 from __future__ import annotations
@@ -22,22 +22,54 @@ def predict(
     """Run batch prediction for a feature table against a trained model.
 
     Args:
-        model_path: Path to a serialized trained model artifact.
-        feature_table_path: Path to a feature table of candidates to score.
-        output_path: Destination path for predictions.
+        model_path: Path to a serialized flagship joblib artifact.
+        feature_table_path: Path to a CSV feature table of candidates.
+        output_path: Destination CSV path for predictions.
 
     Returns:
-        Path to the written predictions file.
+        Path to the written predictions file (columns ``primer_id``,
+        ``predicted_efficiency``).
 
     Raises:
-        FileNotFoundError: If ``model_path`` or ``feature_table_path`` is
-            missing.
+        FileNotFoundError: If ``model_path`` or ``feature_table_path`` missing.
     """
-    raise NotImplementedError
+    import joblib
+    import pandas as pd
+
+    model_path = Path(model_path)
+    feature_table_path = Path(feature_table_path)
+    if not model_path.exists():
+        raise FileNotFoundError(f"model artifact not found: {model_path}")
+    if not feature_table_path.exists():
+        raise FileNotFoundError(f"feature table not found: {feature_table_path}")
+
+    artifact = joblib.load(model_path)
+    if isinstance(artifact, dict):
+        model = artifact["model"]
+        feature_names = artifact["feature_names"]
+    else:
+        model = artifact
+        feature_names = None
+
+    df = pd.read_csv(feature_table_path)
+    cols = (
+        feature_names
+        if feature_names is not None
+        else [c for c in df.columns if c not in ("primer_id", "template_id", "label")]
+    )
+    x = df[cols].to_numpy(dtype=float)
+    preds = model.predict(x)
+
+    out = pd.DataFrame(
+        {"primer_id": df["primer_id"], "predicted_efficiency": [float(p) for p in preds]}
+    )
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(output_path, index=False)
+    return output_path
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    """Build the CLI argument parser for this module."""
     parser = argparse.ArgumentParser(description="Batch-predict primer efficiency.")
     parser.add_argument("--model", required=True, help="Path to trained model artifact")
     parser.add_argument("--features", required=True, help="Path to feature table")

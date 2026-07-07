@@ -1,21 +1,33 @@
-# Example pipeline config: paths, model params, feature toggles, CV grouping.
+# Pipeline config: paths, model params, feature toggles, CV grouping.
 #
 # Per CLAUDE.md, model params/feature toggles/paths belong here, not
-# hardcoded in pipeline modules. This is a scaffold example — adjust paths
-# per dataset.
+# hardcoded in pipeline modules. Paths are relative to the repo root
+# (Snakemake runs with workdir = repo root).
+
+data:
+  seed: 1234
+  n_templates: 60
+  primers_per_template: 8
+  template_length: 400
 
 paths:
-  dataset: "data/example_dataset.csv"
-  feature_table: "data/example_features.parquet"
-  model_artifact: "data/models/example_model.joblib"
-  evaluation_report: "data/reports/example_evaluation.json"
+  dataset: "data/simulated/primers.csv"
+  feature_table: "data/simulated/features.csv"
+  model_artifact: "data/models/flagship_model.joblib"
+  evaluation_report: "data/reports/evaluation.json"
+  predictions: "data/reports/predictions.csv"
   blast_db: "data/blast/offtarget_db"
 
 features:
   composition: true
   thermo: true
-  structure: true
-  specificity: true
+  # Enable structure once template_seq + site_start columns are present in the
+  # dataset metadata (the simulated dataset carries them, but ViennaRNA folding
+  # of every primer site is slow, so it is off by default).
+  structure: false
+  # Specificity needs a formatted local BLAST DB + the blastn binary. When the
+  # DB path below does not exist on disk, featurize logs a skip and continues.
+  specificity: false
 
 thermo:
   primer3_settings:
@@ -35,9 +47,29 @@ model:
     max_depth: 4
     learning_rate: 0.05
 
+# Per-model hyperparameters used by the evaluate.py ladder comparison.
+ladder:
+  elasticnet:
+    alpha: 0.01
+    l1_ratio: 0.5
+    max_iter: 5000
+  random_forest:
+    n_estimators: 300
+    max_depth: 6
+    random_state: 0
+  xgboost:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+  lightgbm:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+    verbose: -1
+
 cv:
   grouping_key: "template_id" # gene/template grouping to prevent leakage
-  n_splits: 5
+  n_splits: 5 # must be <= n_templates
   random_state: 0
 
 mlflow:

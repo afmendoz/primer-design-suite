@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_xgboost(**params: object) -> Any:
+def build_xgboost(**params: Any) -> Any:
     """Construct an XGBoost regressor for primer efficiency prediction.
 
     Args:
@@ -22,10 +22,12 @@ def build_xgboost(**params: object) -> Any:
     Returns:
         An unfitted ``xgboost.XGBRegressor`` estimator.
     """
-    raise NotImplementedError
+    import xgboost
+
+    return xgboost.XGBRegressor(**params)
 
 
-def build_lightgbm(**params: object) -> Any:
+def build_lightgbm(**params: Any) -> Any:
     """Construct a LightGBM regressor for primer efficiency prediction.
 
     Args:
@@ -37,4 +39,6 @@ def build_lightgbm(**params: object) -> Any:
     Returns:
         An unfitted ``lightgbm.LGBMRegressor`` estimator.
     """
-    raise NotImplementedError
+    import lightgbm
+
+    return lightgbm.LGBMRegressor(**params)

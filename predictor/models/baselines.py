@@ -2,7 +2,8 @@
 
 These are the floor of the modeling ladder (see CLAUDE.md) — simple,
 well-understood models that gradient boosting and the CNN must beat to
-justify their added complexity.
+justify their added complexity. ElasticNet is wrapped in a StandardScaler
+pipeline since a linear model needs standardized inputs.
 """
 
 from __future__ import annotations
@@ -10,8 +11,8 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_elasticnet(**params: object) -> Any:
-    """Construct an ElasticNet regressor for primer efficiency prediction.
+def build_elasticnet(**params: Any) -> Any:
+    """Construct a scaled ElasticNet regressor for efficiency prediction.
 
     Args:
         **params: Hyperparameters forwarded to
@@ -19,12 +20,22 @@ def build_elasticnet(**params: object) -> Any:
             typically sourced from ``predictor/workflows/configs/config.yaml``.
 
     Returns:
-        An unfitted ``sklearn.linear_model.ElasticNet`` estimator.
+        An unfitted ``sklearn.pipeline.Pipeline`` of
+        ``StandardScaler -> ElasticNet``.
     """
-    raise NotImplementedError
+    from sklearn.linear_model import ElasticNet
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    return Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("elasticnet", ElasticNet(**params)),
+        ]
+    )
 
 
-def build_random_forest(**params: object) -> Any:
+def build_random_forest(**params: Any) -> Any:
     """Construct a RandomForest regressor for primer efficiency prediction.
 
     Args:
@@ -36,4 +47,6 @@ def build_random_forest(**params: object) -> Any:
     Returns:
         An unfitted ``sklearn.ensemble.RandomForestRegressor`` estimator.
     """
-    raise NotImplementedError
+    from sklearn.ensemble import RandomForestRegressor
+
+    return RandomForestRegressor(**params)

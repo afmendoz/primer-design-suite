@@ -1,20 +1,40 @@
-"""Minimal Snakemake DAG: featurize -> train -> evaluate.
+"""Snakemake DAG: simulate -> featurize -> train -> evaluate (+ predict).
 
-Run from this directory with `snakemake -c4` (per CLAUDE.md), or point
---configfile elsewhere. Rules shell out to the pipeline stage CLIs in
-predictor/pipeline/, which is the same code path used outside Snakemake.
+Runs the same pipeline-stage CLIs used outside Snakemake. Works whether you
+launch from the repo root or from ``predictor/workflows/``: the working
+directory is pinned to the repo root and the config path is resolved
+absolutely from the Snakefile location, so the ``data/...`` paths in the
+config always resolve.
 
-This is a scaffold DAG: paths and params are read from configs/config.yaml
-and the rules assume they are run from the repo root (adjust `workdir` below
-if that's not the case in practice).
+    snakemake -c4 -s predictor/workflows/Snakefile      # from repo root
+    cd predictor/workflows && snakemake -c4             # from the workflow dir
 """
 
-configfile: "predictor/workflows/configs/config.yaml"
+import os
+
+CONFIG_PATH = os.path.join(workflow.basedir, "configs", "config.yaml")
+REPO_ROOT = os.path.abspath(os.path.join(workflow.basedir, "..", ".."))
+
+
+configfile: CONFIG_PATH
+workdir: REPO_ROOT
 
 
 rule all:
     input:
         config["paths"]["evaluation_report"],
+        config["paths"]["predictions"],
+
+
+rule simulate:
+    output:
+        dataset=config["paths"]["dataset"],
+        provenance=config["paths"]["dataset"].replace(".csv", ".provenance.yaml"),
+    params:
+        config_path=CONFIG_PATH,
+    shell:
+        "python -m predictor.pipeline.simulate "
+        "--output {output.dataset} --config {params.config_path}"
 
 
 rule featurize:
@@ -23,7 +43,7 @@ rule featurize:
     output:
         features=config["paths"]["feature_table"],
     params:
-        config_path="predictor/workflows/configs/config.yaml",
+        config_path=CONFIG_PATH,
     shell:
         "python -m predictor.pipeline.featurize "
         "--dataset {input.dataset} --output {output.features} --config {params.config_path}"
@@ -36,7 +56,7 @@ rule train:
         model=config["paths"]["model_artifact"],
     params:
         model_name=config["model"]["name"],
-        config_path="predictor/workflows/configs/config.yaml",
+        config_path=CONFIG_PATH,
     shell:
         "python -m predictor.pipeline.train "
         "--features {input.features} --model {params.model_name} "
@@ -50,8 +70,19 @@ rule evaluate:
     output:
         report=config["paths"]["evaluation_report"],
     params:
-        config_path="predictor/workflows/configs/config.yaml",
+        config_path=CONFIG_PATH,
     shell:
         "python -m predictor.pipeline.evaluate "
         "--model {input.model} --features {input.features} "
         "--output {output.report} --config {params.config_path}"
+
+
+rule predict:
+    input:
+        model=config["paths"]["model_artifact"],
+        features=config["paths"]["feature_table"],
+    output:
+        predictions=config["paths"]["predictions"],
+    shell:
+        "python -m predictor.pipeline.predict "
+        "--model {input.model} --features {input.features} --output {output.predictions}"
