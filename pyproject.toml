@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "primer-design-suite"
+version = "0.1.0"
+description = "ML-driven primer / assay design: predictor flagship + LLM copilot over a shared core."
+requires-python = ">=3.10"
+dependencies = [
+    "primer3-py",
+    "biopython",
+    "ViennaRNA",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "xgboost",
+    "lightgbm",
+    "shap",
+    "pyyaml",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+predictor = ["torch", "snakemake", "mlflow"]
+copilot = ["anthropic", "streamlit"]
+dev = ["pytest", "ruff", "black"]
+
+[tool.setuptools.packages.find]
+include = ["primer_core*", "predictor*", "copilot*"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.black]
+line-length = 100

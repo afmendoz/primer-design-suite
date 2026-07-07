@@ -1,0 +1,45 @@
+# Example pipeline config: paths, model params, feature toggles, CV grouping.
+#
+# Per CLAUDE.md, model params/feature toggles/paths belong here, not
+# hardcoded in pipeline modules. This is a scaffold example — adjust paths
+# per dataset.
+
+paths:
+  dataset: "data/example_dataset.csv"
+  feature_table: "data/example_features.parquet"
+  model_artifact: "data/models/example_model.joblib"
+  evaluation_report: "data/reports/example_evaluation.json"
+  blast_db: "data/blast/offtarget_db"
+
+features:
+  composition: true
+  thermo: true
+  structure: true
+  specificity: true
+
+thermo:
+  primer3_settings:
+    mv_conc: 50.0 # mM monovalent cation
+    dv_conc: 3.0 # mM divalent cation
+    dntp_conc: 0.8 # mM
+    dna_conc: 50.0 # nM
+
+specificity:
+  blastn_task: "blastn-short"
+  window: 5
+
+model:
+  name: "xgboost" # one of: elasticnet, random_forest, xgboost, lightgbm, cnn
+  params:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+
+cv:
+  grouping_key: "template_id" # gene/template grouping to prevent leakage
+  n_splits: 5
+  random_state: 0
+
+mlflow:
+  tracking_uri: "./mlruns"
+  experiment_name: "primer-design-suite"

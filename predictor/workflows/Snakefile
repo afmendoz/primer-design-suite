@@ -1,0 +1,57 @@
+"""Minimal Snakemake DAG: featurize -> train -> evaluate.
+
+Run from this directory with `snakemake -c4` (per CLAUDE.md), or point
+--configfile elsewhere. Rules shell out to the pipeline stage CLIs in
+predictor/pipeline/, which is the same code path used outside Snakemake.
+
+This is a scaffold DAG: paths and params are read from configs/config.yaml
+and the rules assume they are run from the repo root (adjust `workdir` below
+if that's not the case in practice).
+"""
+
+configfile: "predictor/workflows/configs/config.yaml"
+
+
+rule all:
+    input:
+        config["paths"]["evaluation_report"],
+
+
+rule featurize:
+    input:
+        dataset=config["paths"]["dataset"],
+    output:
+        features=config["paths"]["feature_table"],
+    params:
+        config_path="predictor/workflows/configs/config.yaml",
+    shell:
+        "python -m predictor.pipeline.featurize "
+        "--dataset {input.dataset} --output {output.features} --config {params.config_path}"
+
+
+rule train:
+    input:
+        features=config["paths"]["feature_table"],
+    output:
+        model=config["paths"]["model_artifact"],
+    params:
+        model_name=config["model"]["name"],
+        config_path="predictor/workflows/configs/config.yaml",
+    shell:
+        "python -m predictor.pipeline.train "
+        "--features {input.features} --model {params.model_name} "
+        "--output {output.model} --config {params.config_path}"
+
+
+rule evaluate:
+    input:
+        model=config["paths"]["model_artifact"],
+        features=config["paths"]["feature_table"],
+    output:
+        report=config["paths"]["evaluation_report"],
+    params:
+        config_path="predictor/workflows/configs/config.yaml",
+    shell:
+        "python -m predictor.pipeline.evaluate "
+        "--model {input.model} --features {input.features} "
+        "--output {output.report} --config {params.config_path}"
