@@ -41,24 +41,46 @@ docs/           model cards
 tests/          pytest
 ```
 
-## Commands
+## Run it locally
 
 ```bash
-conda activate primer                 # environment is conda on WSL
-pip install -e .                       # editable install
-pytest -q                              # run before proposing any change is complete
+# 1. Code + environment (Python 3.11)
+git clone https://github.com/afmendoz/primer-design-suite
+cd primer-design-suite
+conda create -n primer python=3.11 -y && conda activate primer   # or python -m venv .venv
 
-# Head A trains on committed data. Head B needs the ETH set fetched first:
-git clone --depth 1 https://github.com/BorgwardtLab/PCR-bias data/eth_pcr_bias
+# 2. Install (base + the app/agent deps)
+pip install -e ".[copilot]"            # base + streamlit + openai + anthropic
+#   LightGBM needs the OpenMP runtime; if `import lightgbm` fails:
+#     conda install -c conda-forge libgomp          # (usually already present on Ubuntu)
+#   BLAST+ (optional, only for the Specificity tab):
+#     conda install -c bioconda blast               # (or apt install ncbi-blast+)
 
-cd predictor/workflows && snakemake -c4         # builds head_a + head_b reports
-python -m predictor.pipeline.head_a             # or run a head directly
-python -m predictor.pipeline.head_b
+# 3. Build the head-A models (Source A data is committed, so this just works)
+python -m predictor.pipeline.head_a    # -> data/models/head_a_{classifier,regressor}.joblib
 
-streamlit run copilot/app/main.py               # the agent UI (pick a provider/model)
+# 4. (optional) Build the demo BLAST DB for the Specificity tab
+python scripts/build_ighv_blastdb.py   # -> data/blast/ighv_db   (needs BLAST+)
+
+# 5. Run the app
+streamlit run copilot/app/main.py      # -> http://localhost:8501
 ```
 
-Reports land in `data/reports/head_a.json` and `head_b.json`; trained head-A
+**What needs what:** the **Score manual primers** and **Specificity** tabs work
+after steps 3 (+4 for specificity) with **no API key**. The **Design (agent)**
+tab additionally needs a provider key in the environment before launching, e.g.
+`export ANTHROPIC_API_KEY=...` (or `OPENAI_API_KEY=...`).
+
+**Head B** (the cross-source generalization benchmark) is optional and separate:
+
+```bash
+git clone --depth 1 https://github.com/BorgwardtLab/PCR-bias data/eth_pcr_bias
+python -m predictor.pipeline.head_b
+# or run the whole DAG:  cd predictor/workflows && snakemake -c4
+pip install -e ".[dev]" && pytest -q   # dev tooling + the test suite
+```
+
+Reports land in `data/reports/head_a.json` / `head_b.json`; trained head-A
 artifacts in `data/models/head_a_{classifier,regressor}.joblib`.
 
 ## Data & licensing

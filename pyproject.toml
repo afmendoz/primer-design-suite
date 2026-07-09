@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 predictor = ["torch", "snakemake", "mlflow"]
-copilot = ["anthropic", "streamlit"]
+copilot = ["anthropic", "openai", "streamlit"]  # both providers + the Streamlit app
 dev = ["pytest", "ruff", "black"]
 
 [tool.setuptools.packages.find]
