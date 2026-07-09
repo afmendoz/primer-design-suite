@@ -1,0 +1,26 @@
+name: openprimer_ighv
+source_doi: 10.6084/m9.figshare.6736232        # precomputed feature matrix (committed)
+raw_data_doi: 10.6084/m9.figshare.6736175      # raw PCR results (159 MB, not committed)
+paper_doi: 10.1038/s41598-019-47173-w
+license: CC-BY-4.0
+label_type: binary_gel_amplification           # classification head
+label_definition: >-
+  majority vote (>=3/5 human reviewers) of a visible gel band at the expected
+  size. feature_matrix.csv also carries a continuous primer_efficiency in [0,1]
+  (152 distinct values) and coverage columns; the binary vote itself lives in
+  the raw Single_Eval_*.csv per-reviewer files.
+head: classification
+domain: designed IGHV antibody primers on real V-gene templates
+n_rows: 829
+grouping_key: Template                          # 47 templates; also a coarser Group (IGHV1..)
+known_bias: >-
+  primers were pre-filtered for a GC clamp and no self-dimers, so the model
+  cannot see those failure modes and will overestimate amplification for
+  primers with unfavorable properties or structured templates.
+modeling_n: 783                                 # after excluding degenerate primers
+notes: >-
+  46/829 primers contain IUPAC degenerate bases (R/Y/N...) and are EXCLUDED from
+  modeling by decision (no degenerate handling) — 783 non-degenerate primers
+  remain; record the exclusion in the model card. annealing_DeltaG is a
+  primer-TEMPLATE annealing energy from OligoArrayAux at 55/57 C (includes
+  mismatches) — not an intrinsic primer feature; expect an offset vs Primer3.

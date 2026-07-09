@@ -42,3 +42,19 @@ def build_lightgbm(**params: Any) -> Any:
     import lightgbm
 
     return lightgbm.LGBMRegressor(**params)
+
+
+def build_xgboost_classifier(**params: Any) -> Any:
+    """Construct an XGBoost classifier for the amplification label."""
+    import xgboost
+
+    return xgboost.XGBClassifier(**params)
+
+
+def build_lightgbm_classifier(**params: Any) -> Any:
+    """Construct a LightGBM classifier for the amplification label."""
+    import lightgbm
+
+    params.setdefault("class_weight", "balanced")
+    params.setdefault("verbose", -1)
+    return lightgbm.LGBMClassifier(**params)

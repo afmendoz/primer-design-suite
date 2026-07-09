@@ -50,3 +50,32 @@ def build_random_forest(**params: Any) -> Any:
     from sklearn.ensemble import RandomForestRegressor
 
     return RandomForestRegressor(**params)
+
+
+def build_logreg(**params: Any) -> Any:
+    """Construct a scaled LogisticRegression classifier (amplify y/n).
+
+    Baseline for head A's classification head; wrapped in a StandardScaler
+    pipeline since a linear model needs standardized inputs. ``class_weight``
+    defaults to ``"balanced"`` given the ~14% positive rate.
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    params.setdefault("class_weight", "balanced")
+    params.setdefault("max_iter", 1000)
+    return Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("logreg", LogisticRegression(**params)),
+        ]
+    )
+
+
+def build_random_forest_classifier(**params: Any) -> Any:
+    """Construct a RandomForest classifier for the amplification label."""
+    from sklearn.ensemble import RandomForestClassifier
+
+    params.setdefault("class_weight", "balanced")
+    return RandomForestClassifier(**params)

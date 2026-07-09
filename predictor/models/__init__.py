@@ -14,8 +14,18 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from predictor.models.baselines import build_elasticnet, build_random_forest
-from predictor.models.boosting import build_lightgbm, build_xgboost
+from predictor.models.baselines import (
+    build_elasticnet,
+    build_logreg,
+    build_random_forest,
+    build_random_forest_classifier,
+)
+from predictor.models.boosting import (
+    build_lightgbm,
+    build_lightgbm_classifier,
+    build_xgboost,
+    build_xgboost_classifier,
+)
 from predictor.models.cnn import build_kmer_mlp, build_sequence_cnn
 
 MODEL_BUILDERS: dict[str, Callable[..., Any]] = {
@@ -27,9 +37,18 @@ MODEL_BUILDERS: dict[str, Callable[..., Any]] = {
     "kmer_mlp": build_kmer_mlp,
 }
 
+# Classification ladder for head A's amplify/no head.
+CLASSIFIER_BUILDERS: dict[str, Callable[..., Any]] = {
+    "logreg": build_logreg,
+    "random_forest": build_random_forest_classifier,
+    "xgboost": build_xgboost_classifier,
+    "lightgbm": build_lightgbm_classifier,
+}
+
 # The tabular ladder used for the honest baseline-vs-boosting comparison
 # (excludes the optional deep models, which need torch and raw sequence).
 LADDER_MODELS: tuple[str, ...] = ("elasticnet", "random_forest", "xgboost", "lightgbm")
+CLASSIFIER_LADDER: tuple[str, ...] = ("logreg", "random_forest", "xgboost", "lightgbm")
 
 
 def get_model(name: str, params: dict[str, Any] | None = None) -> Any:
@@ -50,4 +69,18 @@ def get_model(name: str, params: dict[str, Any] | None = None) -> Any:
     return MODEL_BUILDERS[name](**(params or {}))
 
 
-__all__ = ["MODEL_BUILDERS", "LADDER_MODELS", "get_model"]
+def get_classifier(name: str, params: dict[str, Any] | None = None) -> Any:
+    """Build an unfitted classifier by registry name (see ``CLASSIFIER_BUILDERS``)."""
+    if name not in CLASSIFIER_BUILDERS:
+        raise ValueError(f"unknown classifier {name!r}; choose from {sorted(CLASSIFIER_BUILDERS)}")
+    return CLASSIFIER_BUILDERS[name](**(params or {}))
+
+
+__all__ = [
+    "MODEL_BUILDERS",
+    "CLASSIFIER_BUILDERS",
+    "LADDER_MODELS",
+    "CLASSIFIER_LADDER",
+    "get_model",
+    "get_classifier",
+]

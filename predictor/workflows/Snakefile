@@ -1,13 +1,18 @@
-"""Snakemake DAG: simulate -> featurize -> train -> evaluate (+ predict).
-
-Runs the same pipeline-stage CLIs used outside Snakemake. Works whether you
-launch from the repo root or from ``predictor/workflows/``: the working
-directory is pinned to the repo root and the config path is resolved
-absolutely from the Snakefile location, so the ``data/...`` paths in the
-config always resolve.
+"""Snakemake DAG for the two-head predictor (Source A + Source B).
 
     snakemake -c4 -s predictor/workflows/Snakefile      # from repo root
     cd predictor/workflows && snakemake -c4             # from the workflow dir
+
+`all` builds both heads' reports:
+
+* head_a -> openPrimeR in-domain classification + regression (data committed).
+* head_b -> ETH PCR-bias cross-source generalization. Requires the ETH repo to
+  be fetched first (148 MB, gitignored):
+      git clone --depth 1 https://github.com/BorgwardtLab/PCR-bias data/eth_pcr_bias
+
+The working directory is pinned to the repo root so the ``data/...`` paths
+resolve regardless of where snakemake is launched. (The earlier simulated
+single-head pipeline is retired; its modules remain as a test fixture.)
 """
 
 import os
@@ -22,67 +27,28 @@ workdir: REPO_ROOT
 
 rule all:
     input:
-        config["paths"]["evaluation_report"],
-        config["paths"]["predictions"],
+        "data/reports/head_a.json",
+        "data/reports/head_b.json",
 
 
-rule simulate:
-    output:
-        dataset=config["paths"]["dataset"],
-        provenance=config["paths"]["dataset"].replace(".csv", ".provenance.yaml"),
-    params:
-        config_path=CONFIG_PATH,
-    shell:
-        "python -m predictor.pipeline.simulate "
-        "--output {output.dataset} --config {params.config_path}"
-
-
-rule featurize:
+rule head_a:
+    """openPrimeR: featurize (incl. annealing) -> classification + regression."""
     input:
-        dataset=config["paths"]["dataset"],
+        matrix=config["head_a"]["matrix"],
+        templates=config["head_a"]["templates"],
     output:
-        features=config["paths"]["feature_table"],
-    params:
-        config_path=CONFIG_PATH,
+        report="data/reports/head_a.json",
+        classifier="data/models/head_a_classifier.joblib",
+        regressor="data/models/head_a_regressor.joblib",
     shell:
-        "python -m predictor.pipeline.featurize "
-        "--dataset {input.dataset} --output {output.features} --config {params.config_path}"
+        "python -m predictor.pipeline.head_a"
 
 
-rule train:
+rule head_b:
+    """ETH PCR-bias: internal 5-fold + leave-one-source-out generalization."""
     input:
-        features=config["paths"]["feature_table"],
+        data=directory(config["head_b"]["data_dir"]),
     output:
-        model=config["paths"]["model_artifact"],
-    params:
-        model_name=config["model"]["name"],
-        config_path=CONFIG_PATH,
+        report="data/reports/head_b.json",
     shell:
-        "python -m predictor.pipeline.train "
-        "--features {input.features} --model {params.model_name} "
-        "--output {output.model} --config {params.config_path}"
-
-
-rule evaluate:
-    input:
-        model=config["paths"]["model_artifact"],
-        features=config["paths"]["feature_table"],
-    output:
-        report=config["paths"]["evaluation_report"],
-    params:
-        config_path=CONFIG_PATH,
-    shell:
-        "python -m predictor.pipeline.evaluate "
-        "--model {input.model} --features {input.features} "
-        "--output {output.report} --config {params.config_path}"
-
-
-rule predict:
-    input:
-        model=config["paths"]["model_artifact"],
-        features=config["paths"]["feature_table"],
-    output:
-        predictions=config["paths"]["predictions"],
-    shell:
-        "python -m predictor.pipeline.predict "
-        "--model {input.model} --features {input.features} --output {output.predictions}"
+        "python -m predictor.pipeline.head_b"

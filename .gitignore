@@ -1,6 +1,9 @@
-# Never commit raw proprietary or wet-lab data (see CLAUDE.md data rules).
+# data/ is local-only (fetched sets, generated models/reports) EXCEPT
+# data/public/, which holds the committable licensed data (openPrimeR + the
+# attributions file). Never commit raw proprietary or wet-lab data.
 data/*
 !data/.gitkeep
+!data/public/
 
 # Python
 __pycache__/

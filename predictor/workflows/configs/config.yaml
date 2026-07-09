@@ -1,34 +1,22 @@
-# Pipeline config: paths, model params, feature toggles, CV grouping.
-#
-# Per CLAUDE.md, model params/feature toggles/paths belong here, not
-# hardcoded in pipeline modules. Paths are relative to the repo root
-# (Snakemake runs with workdir = repo root).
+# Pipeline config for the two-head predictor. Paths are relative to the repo
+# root (Snakemake runs with workdir = repo root). Per CLAUDE.md, params/paths
+# live here, not hardcoded.
 
-data:
-  seed: 1234
-  n_templates: 60
-  primers_per_template: 8
-  template_length: 400
+# --- Source A: openPrimeR IGHV (in-domain classification + regression) --------
+head_a:
+  matrix: "data/public/openprimer/feature_matrix.csv" # committable (CC BY 4.0, 0.2 MB)
+  templates: "data/public/openprimer/templates/Homo_sapiens_IGH_functional_exon.fasta"
+  efficiency_threshold: 0.5 # amplified := primer_efficiency >= threshold
+  grouping_key: "template_id" # grouped CV (see model card for primer-grouped view)
+  n_splits: 5
 
-paths:
-  dataset: "data/simulated/primers.csv"
-  feature_table: "data/simulated/features.csv"
-  model_artifact: "data/models/flagship_model.joblib"
-  evaluation_report: "data/reports/evaluation.json"
-  predictions: "data/reports/predictions.csv"
-  blast_db: "data/blast/offtarget_db"
+# --- Source B: ETH PCR-bias (cross-source generalization benchmark) -----------
+head_b:
+  data_dir: "data/eth_pcr_bias/Data" # fetched, gitignored (BSD-3, 148 MB)
+  threshold: "2perc" # which bad_seqs_<threshold>.pkl (labels are threshold-independent)
+  per_source_cap: 3000 # balanced subsample per source
 
-features:
-  composition: true
-  thermo: true
-  # Enable structure once template_seq + site_start columns are present in the
-  # dataset metadata (the simulated dataset carries them, but ViennaRNA folding
-  # of every primer site is slow, so it is off by default).
-  structure: false
-  # Specificity needs a formatted local BLAST DB + the blastn binary. When the
-  # DB path below does not exist on disk, featurize logs a skip and continues.
-  specificity: false
-
+# --- Shared thermodynamics settings (primer3-py) ------------------------------
 thermo:
   primer3_settings:
     mv_conc: 50.0 # mM monovalent cation
@@ -36,42 +24,33 @@ thermo:
     dntp_conc: 0.8 # mM
     dna_conc: 50.0 # nM
 
+# --- Modeling ladder hyperparameters ------------------------------------------
+ladder:
+  elasticnet: { alpha: 0.01, l1_ratio: 0.5, max_iter: 5000 }
+  random_forest: { n_estimators: 300, random_state: 0 }
+  xgboost: { n_estimators: 300, max_depth: 4, learning_rate: 0.05 }
+  lightgbm: { n_estimators: 300, verbose: -1 }
+
+# --- Specificity (needs a local blastn + formatted DB; optional) --------------
 specificity:
+  # Local demo DB of the IGHV alleles: `python scripts/build_ighv_blastdb.py`.
+  # (Off-target = other IGHV alleles — highly similar paralogs, so a leader/FR1
+  # primer hits many; "off-target" is defined by the DB + assay intent.)
+  blast_db: "data/blast/ighv_db"
+  blast_remote: false # true -> NCBI remote BLAST API (slow, rate-limited)
+  blast_database: "nt" # NCBI db name used when blast_remote: true
   blastn_task: "blastn-short"
   window: 5
-
-model:
-  name: "xgboost" # one of: elasticnet, random_forest, xgboost, lightgbm, cnn
-  params:
-    n_estimators: 300
-    max_depth: 4
-    learning_rate: 0.05
-
-# Per-model hyperparameters used by the evaluate.py ladder comparison.
-ladder:
-  elasticnet:
-    alpha: 0.01
-    l1_ratio: 0.5
-    max_iter: 5000
-  random_forest:
-    n_estimators: 300
-    max_depth: 6
-    random_state: 0
-  xgboost:
-    n_estimators: 300
-    max_depth: 4
-    learning_rate: 0.05
-  lightgbm:
-    n_estimators: 300
-    max_depth: 4
-    learning_rate: 0.05
-    verbose: -1
-
-cv:
-  grouping_key: "template_id" # gene/template grouping to prevent leakage
-  n_splits: 5 # must be <= n_templates
-  random_state: 0
 
 mlflow:
   tracking_uri: "./mlruns"
   experiment_name: "primer-design-suite"
+
+# --- Legacy: the seeded simulated single-head demo (retired from the DAG) ------
+# The simulate/featurize/train/evaluate/predict modules remain as a fast test
+# fixture (tests/test_pipeline.py); they are no longer part of `snakemake all`.
+legacy_simulated:
+  seed: 1234
+  n_templates: 60
+  primers_per_template: 8
+  grouping_key: "template_id"

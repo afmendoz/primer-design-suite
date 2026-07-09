@@ -11,9 +11,10 @@ Two kinds of schema live here:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 # --- Anthropic tool-use JSON schemas -----------------------------------
 
@@ -57,23 +58,33 @@ CHECK_SPECIFICITY_TOOL_SCHEMA: dict[str, Any] = {
         "type": "object",
         "properties": {
             "primer_seq": {"type": "string"},
-            "db_path": {"type": "string"},
+            "db_path": {
+                "type": "string",
+                "description": "(injected by the agent runtime; do not supply)",
+            },
             "exclude_target_id": {"type": "string"},
         },
-        "required": ["primer_seq", "db_path"],
+        "required": ["primer_seq"],
     },
 }
 
 SCORE_CANDIDATE_TOOL_SCHEMA: dict[str, Any] = {
     "name": "score_candidate",
-    "description": "Score a featurized primer candidate using the trained flagship model.",
+    "description": (
+        "Score a primer with the trained head-A models: returns P(amplify) and "
+        "predicted efficiency (with in-domain caveats). Provide just the primer "
+        "sequence; the tool featurizes it (against the design template) itself."
+    ),
     "input_schema": {
         "type": "object",
         "properties": {
-            "candidate_features": {"type": "object"},
-            "model_path": {"type": "string"},
+            "primer_seq": {"type": "string", "description": "Primer sequence, 5'->3'."},
+            "model_path": {
+                "type": "string",
+                "description": "(injected by the agent runtime; do not supply)",
+            },
         },
-        "required": ["candidate_features", "model_path"],
+        "required": ["primer_seq"],
     },
 }
 
@@ -104,7 +115,9 @@ class RankedCandidate(BaseModel):
         tm_forward: Forward primer Tm (C), from ``thermo_check``.
         tm_reverse: Reverse primer Tm (C), from ``thermo_check``.
         off_target_hit_count: From ``check_specificity``.
-        predicted_efficiency: From ``score_candidate``.
+        predicted_efficiency: Head-A regression, from ``score_candidate``.
+        amplify_probability: Head-A P(amplify), from ``score_candidate`` (may be
+            absent if only the regressor head was available).
         risk_flags: Short machine-readable risk tags (e.g. "dimer_risk",
             "offtarget_risk", "low_predicted_efficiency").
     """
@@ -116,6 +129,7 @@ class RankedCandidate(BaseModel):
     tm_reverse: float
     off_target_hit_count: int
     predicted_efficiency: float
+    amplify_probability: float | None = None
     risk_flags: list[str] = Field(default_factory=list)
 
 
@@ -131,19 +145,80 @@ class RankedOutput(BaseModel):
     design_goal: str
 
 
+def strip_code_fences(text: str) -> str:
+    """Remove a wrapping markdown code fence (```` ``` ```` or ```` ```json ````)."""
+    s = text.strip()
+    if not s.startswith("```"):
+        return s
+    lines = s.splitlines()[1:]  # drop the opening fence line
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def find_json_span(text: str) -> tuple[int, int] | None:
+    """Return ``(start, end)`` of the first balanced ``{...}`` object in ``text``.
+
+    Brace matching is string-aware: braces inside JSON string literals (and
+    escaped quotes) are ignored, so prose or values containing braces do not
+    confuse the scan. Returns ``None`` if no balanced object is found.
+    """
+    depth = 0
+    start: int | None = None
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                return (start, i + 1)
+    return None
+
+
 def parse_ranked_output(raw_json: str) -> RankedOutput:
     """Defensively parse the agent's ranked-output JSON block.
 
+    Tolerant of accidental markdown fences and of surrounding prose (the model
+    is told to emit bare JSON, but we do not trust that): fences are stripped,
+    then the whole string is tried as JSON, and failing that the first balanced
+    ``{...}`` object is extracted and parsed.
+
     Args:
-        raw_json: Raw JSON text emitted by the agent (no markdown fences, no
-            surrounding prose expected, but this function should not assume
-            that holds and should fail with a clear error if it doesn't).
+        raw_json: Raw text emitted by the agent.
 
     Returns:
         A validated ``RankedOutput``.
 
     Raises:
-        ValueError: If ``raw_json`` is not valid JSON or fails schema
+        ValueError: If no valid JSON object is found or it fails schema
             validation.
     """
-    raise NotImplementedError
+    s = strip_code_fences(raw_json)
+    try:
+        data = json.loads(s)
+    except json.JSONDecodeError:
+        span = find_json_span(s)
+        if span is None:
+            raise ValueError("no JSON object found in ranked output")
+        try:
+            data = json.loads(s[span[0] : span[1]])
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid ranked-output JSON: {exc}") from exc
+    try:
+        return RankedOutput(**data)
+    except ValidationError as exc:
+        raise ValueError(f"ranked output failed schema validation: {exc}") from exc
