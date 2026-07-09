@@ -1,5 +1,7 @@
 # primer-design-suite
 
+[![CI](https://github.com/afmendoz/primer-design-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/afmendoz/primer-design-suite/actions/workflows/ci.yml)
+
 ML-driven PCR primer / assay design, told in two stages over one shared core:
 
 1. **`predictor/` (flagship)** — trains models on **two real, licensed

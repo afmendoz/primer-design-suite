@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # LightGBM needs the OpenMP runtime; BLAST+ enables the specificity tests
+      # (otherwise they skip). The heavy scientific deps install from wheels.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgomp1 ncbi-blast+
+
+      - name: Install package (base + dev)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff + black)
+        run: |
+          ruff check .
+          black --check --fast .
+
+      - name: Tests
+        run: pytest -q
