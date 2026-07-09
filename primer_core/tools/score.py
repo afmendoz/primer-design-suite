@@ -111,11 +111,26 @@ def score_dual_head(
             notes.append(f"classifier skipped: {exc}")
     if regressor_path:
         try:
-            out["predicted_efficiency"] = score_candidate(feats, regressor_path)[
-                "predicted_efficiency"
-            ]
+            pe = score_candidate(feats, regressor_path)["predicted_efficiency"]
+            out["predicted_efficiency"] = pe
+            q = _conformal_q90(regressor_path)  # 90% prediction interval half-width
+            if q is not None:
+                out["efficiency_interval"] = [
+                    round(max(0.0, pe - q), 4),
+                    round(min(1.0, pe + q), 4),
+                ]
         except (ValueError, FileNotFoundError) as exc:
             notes.append(f"regressor skipped: {exc}")
     if notes:
         out["notes"] = notes
     return out
+
+
+def _conformal_q90(model_path: str | Path) -> float | None:
+    """Read the stored conformal half-width (90% interval) from an artifact."""
+    import joblib
+
+    artifact = joblib.load(Path(model_path))
+    if isinstance(artifact, dict):
+        return (artifact.get("metadata") or {}).get("conformal_q90")
+    return None

@@ -38,6 +38,23 @@ GC 1.00, length 1.00, Tm 0.86, self-dimer 0.79; annealing ΔG **0.81** vs their
 `three_prime_end_dg`, `hairpin_dg` — biologically sensible (passes the CLAUDE.md
 sanity check).
 
+## Calibration & uncertainty
+- **Classification is well-calibrated.** On grouped-CV out-of-fold predictions,
+  LightGBM has **Brier 0.009** and **ECE ~0.01** — a predicted `P(amplify)` is
+  trustworthy as a probability to ~1%. The saved classifier is additionally
+  **isotonic-calibrated** (`CalibratedClassifierCV`).
+- **Regression carries a prediction interval, not a false-precision point.**
+  Split-conformal on OOF residuals gives a **90% interval of ±0.027** for
+  RandomForest (stored as `conformal_q90`); `score_candidate` returns
+  `efficiency_interval` so callers read the interval. (The band is tight because
+  the efficiency label is narrow and zero-inflated — see below.)
+- **On automatic out-of-domain detection:** an IsolationForest on these features
+  does **not** reliably flag out-of-domain primers (a primer3 primer on a random
+  template still looks in-distribution, because the features encode primer
+  *quality*, not domain membership). Domain membership can't be inferred from
+  these features — which is why the in-domain caveat is attached structurally to
+  every score rather than gated on a detector.
+
 ## Known limitations (read before trusting a number)
 - **Pre-filtering ceiling.** openPrimeR primers were pre-filtered for a GC clamp
   and no self-dimers, so the model never sees those failure modes and will

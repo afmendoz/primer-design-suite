@@ -22,6 +22,7 @@ import pandas as pd
 from scipy.stats import spearmanr
 from sklearn.metrics import (
     average_precision_score,
+    brier_score_loss,
     matthews_corrcoef,
     mean_squared_error,
     roc_auc_score,
@@ -61,14 +62,31 @@ def _oof(estimator_fn, X, y, groups, n_splits, proba: bool):
     return oof
 
 
+def _ece(y, proba, n_bins=10) -> float:
+    """Expected calibration error: gap between predicted P and observed rate."""
+    bins = np.linspace(0.0, 1.0, n_bins + 1)
+    idx = np.digitize(proba, bins[1:-1])
+    ece = 0.0
+    for b in range(n_bins):
+        m = idx == b
+        if m.sum() == 0:
+            continue
+        ece += (m.sum() / len(y)) * abs(proba[m].mean() - y[m].mean())
+    return float(ece)
+
+
 def run_classification(X, y, groups, n_splits=5) -> dict[str, dict[str, float]]:
     out = {}
     for name in CLASSIFIER_LADDER:
         proba = _oof(lambda n=name: get_classifier(n), X, y, groups, n_splits, proba=True)
+        pred = (proba >= 0.5).astype(int)
         out[name] = {
             "roc_auc": float(roc_auc_score(y, proba)),
             "pr_auc": float(average_precision_score(y, proba)),
-            "mcc": float(matthews_corrcoef(y, (proba >= 0.5).astype(int))),
+            "mcc": float(matthews_corrcoef(y, pred)),
+            # Calibration: is a predicted P(amplify) trustworthy as a probability?
+            "brier": float(brier_score_loss(y, proba)),
+            "ece": _ece(y, proba),
         }
     return out
 
@@ -83,9 +101,12 @@ def run_regression(X, y, groups, n_splits=5) -> dict[str, dict[str, float]]:
     }
     for name in LADDER_MODELS:
         oof = _oof(lambda n=name: get_model(n, params[n]), X, y, groups, n_splits, proba=False)
+        # Split-conformal half-width: the 90th percentile of |residual| gives a
+        # marginal 90% prediction interval (pred +/- q90) for a new primer.
         out[name] = {
             "spearman": float(spearmanr(y, oof).correlation),
             "rmse": float(np.sqrt(mean_squared_error(y, oof))),
+            "conformal_q90": float(np.quantile(np.abs(y - oof), 0.90)),
         }
     return out
 
@@ -119,20 +140,27 @@ def main() -> None:
 
     print("== Classification head (amplify y/n), grouped CV by template ==")
     cls = run_classification(X, y_cls, groups)
-    print(f"{'model':<15}{'ROC-AUC':>9}{'PR-AUC':>9}{'MCC':>8}")
+    print(f"{'model':<15}{'ROC-AUC':>9}{'PR-AUC':>9}{'MCC':>8}{'Brier':>8}{'ECE':>7}")
     for m, d in cls.items():
-        print(f"{m:<15}{d['roc_auc']:>9.3f}{d['pr_auc']:>9.3f}{d['mcc']:>8.3f}")
+        print(
+            f"{m:<15}{d['roc_auc']:>9.3f}{d['pr_auc']:>9.3f}{d['mcc']:>8.3f}"
+            f"{d['brier']:>8.3f}{d['ece']:>7.3f}"
+        )
 
     print("\n== Regression head (efficiency), grouped CV by template ==")
     reg = run_regression(X, y_reg, groups)
-    print(f"{'model':<15}{'Spearman':>10}{'RMSE':>8}")
+    print(f"{'model':<15}{'Spearman':>10}{'RMSE':>8}{'q90(+/-)':>10}")
     for m, d in reg.items():
-        print(f"{m:<15}{d['spearman']:>10.3f}{d['rmse']:>8.3f}")
+        print(f"{m:<15}{d['spearman']:>10.3f}{d['rmse']:>8.3f}{d['conformal_q90']:>10.3f}")
 
     # fit best-on-all + save in the score_candidate contract
     best_cls = max(cls, key=lambda m: cls[m]["pr_auc"])
     best_reg = max(reg, key=lambda m: reg[m]["spearman"])
-    clf = get_classifier(best_cls)
+    # Isotonic-calibrate the final classifier so predict_proba is a trustworthy
+    # probability (the report keeps the pre-calibration Brier/ECE it started from).
+    from sklearn.calibration import CalibratedClassifierCV
+
+    clf = CalibratedClassifierCV(get_classifier(best_cls), method="isotonic", cv=5)
     clf.fit(X, y_cls)
     rgr = get_model(
         best_reg,
@@ -166,6 +194,7 @@ def main() -> None:
                 "source": "openprimer",
                 "label": "primer_efficiency",
                 "cv": reg[best_reg],
+                "conformal_q90": reg[best_reg]["conformal_q90"],
                 "is_proxy_label": False,
             },
         },
@@ -189,6 +218,13 @@ def main() -> None:
         json.dump(report, fh, indent=2)
 
     print(f"\nbest classifier: {best_cls}  |  best regressor: {best_reg}")
+    print(
+        f"calibration ({best_cls}): Brier={cls[best_cls]['brier']:.3f} "
+        f"ECE={cls[best_cls]['ece']:.3f}  (saved classifier is isotonic-calibrated)"
+    )
+    print(
+        f"regressor 90% prediction interval: +/- {reg[best_reg]['conformal_q90']:.3f} (conformal)"
+    )
     print("SHAP top-5 (regressor):", shap_top)
     print("saved: data/models/head_a_{classifier,regressor}.joblib, data/reports/head_a.json")
 

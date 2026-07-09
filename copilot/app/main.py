@@ -278,6 +278,7 @@ def render_app() -> None:
                         continue
                     f = out.get("features", {})
                     caveat = out.get("caveats", [caveat])[0]
+                    ci = out.get("efficiency_interval")
                     rows.append(
                         {
                             "primer": p,
@@ -285,12 +286,17 @@ def render_app() -> None:
                             "annealing_dg": round(f.get("annealing_dg", float("nan")), 2),
                             "P(amplify)": out.get("amplify_probability"),
                             "predicted_efficiency": out.get("predicted_efficiency"),
+                            "eff 90% interval": f"[{ci[0]}, {ci[1]}]" if ci else None,
                             "notes": "; ".join(out.get("notes", [])),
                         }
                     )
                 st.dataframe(rows, use_container_width=True)
                 if caveat:
                     st.caption(f"⚠️ {caveat}")
+                st.caption(
+                    "P(amplify) is isotonic-calibrated; 'eff 90% interval' is a conformal "
+                    "prediction interval — read the interval, not the point estimate."
+                )
 
     # --- Tab 3: BLAST specificity demo (local IGHV DB) -----------------------
     with tab_spec:

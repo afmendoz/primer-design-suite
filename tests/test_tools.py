@@ -70,6 +70,24 @@ def test_score_dual_head_returns_both_signals(tmp_path: Path) -> None:
     assert any("no template" in n for n in out.get("notes", []))  # noted missing template
 
 
+def test_score_dual_head_returns_efficiency_interval(tmp_path: Path) -> None:
+    import joblib
+    from sklearn.linear_model import LinearRegression
+
+    feats = ["gc_content", "length", "tm"]
+    reg = LinearRegression().fit(
+        [[0.5, 20, 60.0], [0.6, 22, 62.0], [0.4, 18, 58.0]], [0.6, 0.8, 0.3]
+    )
+    path = tmp_path / "reg.joblib"
+    joblib.dump({"model": reg, "feature_names": feats, "metadata": {"conformal_q90": 0.05}}, path)
+
+    out = score_dual_head("ACGTACGTACGTACGTACGT", regressor_path=path)
+    assert "efficiency_interval" in out
+    lo, hi = out["efficiency_interval"]
+    assert lo <= out["predicted_efficiency"] <= hi
+    assert 0.0 <= lo and hi <= 1.0
+
+
 def test_score_candidate_missing_model(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         score_candidate({"a": 1.0}, tmp_path / "nope.joblib")
