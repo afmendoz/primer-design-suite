@@ -13,7 +13,7 @@ Runs ``blastn -task blastn-short`` for a primer and summarizes the hits with
 Either way the parsed hits share one schema (``subject_id``, ``pident``,
 ``qstart``, ``qend``, ``bitscore``, ...) so the feature functions are identical.
 This is one of the four tools shared by the copilot and plain scripts (see
-CLAUDE.md); the agent calls it rather than reasoning about off-targets itself.
+project convention); the agent calls it rather than reasoning about off-targets itself.
 """
 
 from __future__ import annotations

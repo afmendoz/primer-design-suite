@@ -1,7 +1,7 @@
 """Canonical primer featurizer — the single place feature vectors are built.
 
 Both the predictor pipeline and the copilot's ``score_candidate`` assemble
-features here, so the two halves of the project never drift (CLAUDE.md: one
+features here, so the two halves of the project never drift (project convention: one
 shared ``primer_core`` featurizer). Intrinsic features need only the primer;
 primer-template annealing features are added when a template is supplied.
 """

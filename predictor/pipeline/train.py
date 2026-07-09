@@ -3,7 +3,7 @@
 Trains a model from the ladder in ``predictor.models`` on the featurized
 dataset. Cross-validation is **grouped by gene/template** (config
 ``cv.grouping_key``) so a primer and its sequence neighbors never span train
-and test folds — CLAUDE.md forbids ungrouped CV metrics. We report Spearman
+and test folds — the project forbids ungrouped CV metrics. We report Spearman
 correlation and RMSE (not bare R²).
 
 The saved artifact matches ``primer_core.tools.score.score_candidate``'s
@@ -108,7 +108,7 @@ def train_model(
     Returns:
         A metrics dict with grouped-CV ``spearman``, ``rmse``, and per-fold
         breakdown. A suspiciously high score should be investigated, not
-        celebrated (CLAUDE.md).
+        celebrated (project convention).
 
     Raises:
         FileNotFoundError: If ``feature_table_path`` or ``config_path`` missing.

@@ -1,6 +1,6 @@
 """Baseline model builders: ElasticNet and RandomForest.
 
-These are the floor of the modeling ladder (see CLAUDE.md) — simple,
+These are the floor of the modeling ladder (by project convention) — simple,
 well-understood models that gradient boosting and the CNN must beat to
 justify their added complexity. ElasticNet is wrapped in a StandardScaler
 pipeline since a linear model needs standardized inputs.

@@ -1,6 +1,6 @@
 """Primer duplex thermodynamics — backed by ``primer3-py``.
 
-CLAUDE.md is explicit about the thermodynamics library split:
+the project convention is explicit about the thermodynamics library split:
 
 - ``primer3-py`` is the backend for *all* DNA primer thermodynamics here:
   nearest-neighbor Tm (``calc_tm``) and the hairpin / homodimer / heterodimer

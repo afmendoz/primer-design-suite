@@ -1,6 +1,6 @@
 """Simulation stage: generate a seeded, synthetic primer dataset.
 
-No real wet-lab data exists in this repo (see CLAUDE.md's data rules), so the
+No real wet-lab data exists in this repo (see the project's data rules), so the
 pipeline is bootstrapped on a fully reproducible simulated dataset. The label
 is a **proxy** — a thermodynamic desirability score pushed through a sigmoid,
 plus a latent per-template random intercept and noise. It is emphatically not

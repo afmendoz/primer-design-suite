@@ -1,5 +1,5 @@
 # Pipeline config for the two-head predictor. Paths are relative to the repo
-# root (Snakemake runs with workdir = repo root). Per CLAUDE.md, params/paths
+# root (Snakemake runs with workdir = repo root). By project convention, params/paths
 # live here, not hardcoded.
 
 # --- Source A: openPrimeR IGHV (in-domain classification + regression) --------

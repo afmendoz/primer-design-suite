@@ -1,6 +1,6 @@
 """Small deep model: 1D-CNN / k-mer MLP over raw sequence (PyTorch).
 
-Top of the modeling ladder in CLAUDE.md. ``torch`` is an optional dependency
+Top of the modeling ladder. ``torch`` is an optional dependency
 (see ``pyproject.toml``'s ``predictor`` extra), so the import is deferred
 into the functions below rather than performed at module scope — this module
 must remain importable even when torch is not installed. These builders are

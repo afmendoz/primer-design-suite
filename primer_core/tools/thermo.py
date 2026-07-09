@@ -2,7 +2,7 @@
 
 Summarizes ``primer_core.features.thermo`` into a single report dict for a
 primer or primer pair. One of the four tools shared by the copilot agent and
-plain scripts (see CLAUDE.md); the agent must call this rather than
+plain scripts (by project convention); the agent must call this rather than
 reasoning about Tm/ΔG itself.
 """
 

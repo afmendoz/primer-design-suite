@@ -1,6 +1,6 @@
 """Unit tests for primer_core.features.composition.
 
-Hand-checked expected values per CLAUDE.md's rule that every feature gets a
+Hand-checked expected values per the project's rule that every feature gets a
 unit test with a hand-checked expected value.
 """
 

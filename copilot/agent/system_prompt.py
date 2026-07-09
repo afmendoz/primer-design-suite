@@ -1,6 +1,6 @@
 """System prompt constant enforcing the copilot's hard rules.
 
-Per CLAUDE.md: the LLM orchestrates and interprets tool results; it never
+By project convention: the LLM orchestrates and interprets tool results; it never
 fabricates a sequence or a number. Ranked output must be strict JSON (no
 prose, no markdown fences within the JSON block) so it can be parsed
 defensively by ``copilot/agent/schemas.py``; the prose design memo is

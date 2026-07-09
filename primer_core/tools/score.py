@@ -9,7 +9,7 @@ Two entry points:
   — the copilot-facing scorer. It featurizes the primer (with its template, so
   the primer-template annealing features are available) and returns BOTH head-A
   signals: ``amplify_probability`` (classification) and ``predicted_efficiency``
-  (regression), each with explicit in-domain caveats. Per CLAUDE.md the copilot
+  (regression), each with explicit in-domain caveats. By project convention the copilot
   never asserts these numbers itself — they come from here.
 
 Artifact contract: a joblib dump of EITHER a fitted sklearn-style estimator, OR

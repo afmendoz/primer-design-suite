@@ -1,7 +1,7 @@
 """Sequence composition features.
 
 These are pure, deterministic, no-I/O functions over a DNA sequence string,
-per CLAUDE.md's requirement that ``primer_core/features/`` functions be
+per the project's requirement that ``primer_core/features/`` functions be
 unit-testable in isolation. Unlike the other modules in this package, these
 are trivial enough to implement for real in the scaffold rather than stub
 out, and are covered by ``tests/test_composition.py``.

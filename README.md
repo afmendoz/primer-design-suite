@@ -24,8 +24,8 @@ ML-driven PCR primer / assay design, told in two stages over one shared core:
 
 Both apps consume **`primer_core/`**, the single shared library — the agent and
 any standalone script call the exact same feature and tool functions
-(`primer_core.featurize.featurize_primer` is the one featurizer). See
-`CLAUDE.md` for the full scientific and coding conventions.
+(`primer_core.featurize.featurize_primer` is the one featurizer). The project
+follows a consistent set of scientific and coding conventions throughout.
 
 ## Layout
 

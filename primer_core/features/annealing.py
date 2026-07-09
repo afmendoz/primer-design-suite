@@ -8,7 +8,7 @@ primer to a template by ungapped minimum-mismatch search (both strands), then
 computes the primer-template duplex free energy with Primer3 at that site,
 plus mismatch-context features.
 
-Per CLAUDE.md, primer duplex thermodynamics use primer3-py (not ViennaRNA).
+By project convention, primer duplex thermodynamics use primer3-py (not ViennaRNA).
 These functions are deterministic given their inputs; the alignment search is
 pure, the ΔG term calls into the compiled Primer3 bindings.
 """

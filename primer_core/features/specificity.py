@@ -1,6 +1,6 @@
 """Specificity features — derived from BLAST, not string matching.
 
-Per CLAUDE.md: off-target hit count, best off-target bit score, and 3'-end
+By project convention: off-target hit count, best off-target bit score, and 3'-end
 complementarity to the nearest off-target must come from a real BLAST search
 (``blastn -task blastn-short``, appropriate for short primer queries) against
 a reference/off-target database — never from naive substring or k-mer string

@@ -1,6 +1,6 @@
 """Evaluation stage: trained model -> grouped CV metrics + ladder + SHAP.
 
-Reports, honestly and grouped by template (never ungrouped — CLAUDE.md):
+Reports, honestly and grouped by template (never ungrouped — project convention):
 
 1. Grouped-CV Spearman + RMSE for the flagship model.
 2. The full modeling ladder (ElasticNet / RandomForest / XGBoost / LightGBM)
@@ -202,7 +202,7 @@ def _shap_report(
             result["warning"] = (
                 "Top-3 SHAP features do not include any of "
                 f"{sorted(_SENSIBLE_FEATURES)}; this may indicate leakage or a "
-                "featurization bug (CLAUDE.md biological sanity check)."
+                "featurization bug (a biological sanity check)."
             )
         return result
     except Exception as exc:  # noqa: BLE001 - SHAP is optional / model-dependent

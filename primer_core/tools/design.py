@@ -4,7 +4,7 @@ The LLM copilot never writes a primer sequence itself; every candidate
 sequence returned to the agent (and to any plain script) comes from this
 function. This is the single point of contact with Primer3's design engine
 and is imported by both ``copilot/agent`` and standalone pipeline code —
-never reimplemented downstream (see CLAUDE.md).
+never reimplemented downstream (by project convention).
 """
 
 from __future__ import annotations

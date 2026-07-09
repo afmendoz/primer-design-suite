@@ -35,8 +35,8 @@ GC 1.00, length 1.00, Tm 0.86, self-dimer 0.79; annealing ΔG **0.81** vs their
 | grouped by **primer** (unseen primers) | PR-AUC 0.83 · ROC-AUC 0.98 · MCC 0.77 | Spearman 0.71 · RMSE 0.15 |
 
 **SHAP top features:** `mismatch_count`, `annealing_dg`, `homodimer_dg`,
-`three_prime_end_dg`, `hairpin_dg` — biologically sensible (passes the CLAUDE.md
-sanity check).
+`three_prime_end_dg`, `hairpin_dg` — biologically sensible (passes the expected
+biological sanity check).
 
 ## Calibration & uncertainty
 - **Classification is well-calibrated.** On grouped-CV out-of-fold predictions,

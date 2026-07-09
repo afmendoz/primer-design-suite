@@ -1,7 +1,7 @@
 """Dataset loaders for the predictor pipeline.
 
 Reads labeled primer/assay datasets from ``data/`` (never committed — see
-CLAUDE.md's data rules) alongside their ``*.provenance.yaml`` sidecars, and
+the project's data rules) alongside their ``*.provenance.yaml`` sidecars, and
 returns validated, tabular structures ready for featurization.
 """
 

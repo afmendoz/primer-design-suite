@@ -3,7 +3,7 @@
 Unlike the primer thermodynamic features, k-mer frequencies are defined for a
 sequence of any length, so they are the sensible tabular representation for
 Source B's 90-160 nt amplicon sequences (Primer3 duplex thermodynamics are
-undefined above ~60 bp). Pure and deterministic, per CLAUDE.md.
+undefined above ~60 bp). Pure and deterministic, by project convention.
 """
 
 from __future__ import annotations

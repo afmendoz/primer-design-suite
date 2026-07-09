@@ -1,6 +1,6 @@
 """Streamlit UI entrypoint for the primer design copilot.
 
-Run with: ``streamlit run copilot/app/main.py`` (per CLAUDE.md).
+Run with: ``streamlit run copilot/app/main.py`` (by project convention).
 
 ``streamlit`` is an optional dependency (see the ``copilot`` extra in
 ``pyproject.toml``), so the import is deferred into ``render_app()`` rather

@@ -1,6 +1,6 @@
 """Template / amplicon secondary structure features — backed by ViennaRNA.
 
-Per CLAUDE.md: ViennaRNA is used **only** for template / amplicon secondary
+By project convention: ViennaRNA is used **only** for template / amplicon secondary
 structure (binding-site accessibility). It must never be used for primer
 duplex thermodynamics — that is ``primer3-py``'s job (see
 ``primer_core.features.thermo``).

@@ -1,6 +1,6 @@
 """Pydantic schemas for dataset validation and label provenance.
 
-Per CLAUDE.md: every dataset in ``data/`` must record its source and what its
+By project convention: every dataset in ``data/`` must record its source and what its
 label actually measures in a sidecar ``*.provenance.yaml`` file. Proxy labels
 (e.g. thermodynamically-derived rather than experimentally measured) are
 allowed as a plumbing stepping-stone but must be flagged as proxy everywhere

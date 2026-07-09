@@ -1,6 +1,6 @@
 """Gradient boosting model builders: XGBoost and LightGBM.
 
-Per CLAUDE.md, this stage of the modeling ladder is "usually the winner" on
+By project convention, this stage of the modeling ladder is "usually the winner" on
 this tabular feature set — worth comparing carefully against both the
 baselines and the CNN.
 """
