@@ -73,30 +73,32 @@ biological sanity check).
 
 ## Why not more training data (broadening beyond IGHV)?
 The IGHV-only domain is the model's core limitation, so we did a deliberate
-search for additional public datasets to broaden it. The conclusion was **not to
-add any** — the ceiling is real, not for lack of looking:
-- **qPrimerDB** (147 → 1172 organisms, NAR 2018/2025) looks ideal for breadth and
-  ships primer + amplicon sequences, but contains **zero experimentally-measured
-  efficiency values** — all 430M primers are *computationally designed and
-  thermodynamically pre-optimized* (good GC clamp, no dimers). That is the **same
-  pre-filtering ceiling** openPrimeR has: no bad-quality primers to learn failure
-  modes from. A wrong-template-negatives classifier built from it would have
-  identical intrinsic features across each primer's positive and negative
-  examples, so it could only relearn annealing complementarity — which we already
-  compute deterministically. License is also CC BY-**NC**.
-- **PrimerBank** (NAR 2012): large, but validation-status only (no efficiency
-  values, no failures) — a positive-only set.
-- **PCRedux** (bioRxiv 2021): amplification *curves*, not primer sequences —
-  wrong input type for a sequence featurizer.
-- **PrimerAST** (Sci Rep 2026): N=316 with *synthetically fabricated* negatives.
+search for public datasets to broaden it. The conclusion was **not to add any** —
+the ceiling is real, not for lack of looking. What we need is *sequence-linked,
+truly-labeled primer efficiency/failure* data. What the candidates offer:
 
-Public, sequence-linked, truly-labeled primer **efficiency/failure** data is
-scarce; openPrimeR + the ETH set (Head B) are close to the practical ceiling of
-what is freely licensed and usable. Genuinely extending the domain would require
-data with *measured* outcomes (e.g. mining GEO/SRA standard-curve qPCR, or new
-wet-lab validation) — each a project of its own, not a drop-in dataset. Head B is
-therefore the deliberate cross-domain generalization story, and the in-domain
-caveat is stated structurally rather than papered over with more designed primers.
+| Candidate | Scale / breadth | Efficiency labels? | Failure modes? | License | Verdict |
+|---|---|---|---|---|---|
+| **qPrimerDB** (NAR '18/'25) | 430M primers, 1172 organisms | ✗ all computationally designed | ✗ pre-optimized (GC clamp, no dimers) | CC BY-**NC** | Reject |
+| **PrimerBank** (NAR '12) | large (human/mouse) | ✗ validation-status only | ✗ positive-only | academic | Reject |
+| **PCRedux** (bioRxiv '21) | ~3k curves | ✗ (curve → status) | n/a | open | Wrong input type |
+| **PrimerAST** (Sci Rep '26) | N=316 | ✗ | *fabricated* negatives | — | Reject |
+| **openPrimeR** *(in use)* | 783 pairs, IGHV | binary (gel amplification) | partial | CC BY 4.0 | **Head A** |
+| **ETH PCR-bias** *(in use)* | 7 sources | **continuous** | across-source | BSD-3 | **Head B** |
+
+The pattern is consistent: the broad databases (qPrimerDB, PrimerBank) contain
+only *designed, pre-optimized* primers — no bad-quality examples and no measured
+outcomes — so they hit the **same pre-filtering ceiling** openPrimeR already has.
+A wrong-template-negatives classifier built from them would have identical
+intrinsic features across each primer's positive and negative examples, so it
+could only relearn annealing complementarity, which we already compute
+deterministically. openPrimeR + the ETH set are thus close to the practical
+ceiling of what is freely licensed and usable. Genuinely extending the domain
+would require data with *measured* outcomes (mining GEO/SRA standard-curve qPCR,
+or new wet-lab validation) — each a project of its own, not a drop-in dataset.
+Head B is therefore the deliberate cross-domain generalization story, and the
+in-domain caveat is stated structurally rather than papered over with more
+designed primers.
 
 ## Intended use
 Score designed IGHV-like primers in-domain. **Out of domain** for non-antibody
