@@ -71,6 +71,33 @@ biological sanity check).
 - **Ungapped alignment.** `annealing` uses ungapped min-mismatch alignment; its
   mismatch count matches openPrimeR exactly ~57% of the time (they allow gaps).
 
+## Why not more training data (broadening beyond IGHV)?
+The IGHV-only domain is the model's core limitation, so we did a deliberate
+search for additional public datasets to broaden it. The conclusion was **not to
+add any** — the ceiling is real, not for lack of looking:
+- **qPrimerDB** (147 → 1172 organisms, NAR 2018/2025) looks ideal for breadth and
+  ships primer + amplicon sequences, but contains **zero experimentally-measured
+  efficiency values** — all 430M primers are *computationally designed and
+  thermodynamically pre-optimized* (good GC clamp, no dimers). That is the **same
+  pre-filtering ceiling** openPrimeR has: no bad-quality primers to learn failure
+  modes from. A wrong-template-negatives classifier built from it would have
+  identical intrinsic features across each primer's positive and negative
+  examples, so it could only relearn annealing complementarity — which we already
+  compute deterministically. License is also CC BY-**NC**.
+- **PrimerBank** (NAR 2012): large, but validation-status only (no efficiency
+  values, no failures) — a positive-only set.
+- **PCRedux** (bioRxiv 2021): amplification *curves*, not primer sequences —
+  wrong input type for a sequence featurizer.
+- **PrimerAST** (Sci Rep 2026): N=316 with *synthetically fabricated* negatives.
+
+Public, sequence-linked, truly-labeled primer **efficiency/failure** data is
+scarce; openPrimeR + the ETH set (Head B) are close to the practical ceiling of
+what is freely licensed and usable. Genuinely extending the domain would require
+data with *measured* outcomes (e.g. mining GEO/SRA standard-curve qPCR, or new
+wet-lab validation) — each a project of its own, not a drop-in dataset. Head B is
+therefore the deliberate cross-domain generalization story, and the in-domain
+caveat is stated structurally rather than papered over with more designed primers.
+
 ## Intended use
 Score designed IGHV-like primers in-domain. **Out of domain** for non-antibody
 primers, degenerate primers, or unusual templates — the copilot surfaces this
