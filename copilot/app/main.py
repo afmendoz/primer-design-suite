@@ -79,6 +79,8 @@ def render_app() -> None:
     Raises:
         ImportError: If ``streamlit`` is not installed.
     """
+    from pathlib import Path
+
     import streamlit as st
 
     from copilot.agent.loop import run_agent_loop
@@ -92,6 +94,20 @@ def render_app() -> None:
         "Every sequence and number comes from a real tool (Primer3, ViennaRNA, "
         "BLAST, and the trained head-A models) — never invented."
     )
+
+    # First run: the head-A models aren't committed (they're reproducible from
+    # the committed openPrimeR data), so bootstrap them once if missing.
+    if not Path("data/models/head_a_classifier.joblib").exists():
+        with st.spinner("First run: training the head-A models from committed data (~20 s)…"):
+            try:
+                from predictor.pipeline import head_a
+
+                head_a.main()
+            except Exception as exc:  # noqa: BLE001
+                st.error(
+                    f"Could not build the head-A models: {exc}. "
+                    "Run `python -m predictor.pipeline.head_a` manually."
+                )
 
     with st.sidebar:
         st.header("Model artifacts (head A)")
@@ -129,6 +145,11 @@ def render_app() -> None:
                     "standard hosted endpoint."
                 ),
             )
+        api_key = st.text_input(
+            "API key (blank = use env var)",
+            type="password",
+            help="For the Design (agent) tab; falls back to ANTHROPIC_API_KEY / OPENAI_API_KEY.",
+        )
 
     ctx = {
         "template_seq": _clean_dna(template) or None,
@@ -209,6 +230,8 @@ def render_app() -> None:
             kwargs = {"model": model}
             if provider_name == "openai" and base_url.strip():
                 kwargs["base_url"] = base_url.strip()
+            if api_key.strip():
+                kwargs["api_key"] = api_key.strip()
             goal_msg = (
                 f"{goal.strip()}\n\n"
                 "The design template is already loaded by the runtime — call "

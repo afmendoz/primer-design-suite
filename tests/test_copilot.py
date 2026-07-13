@@ -188,6 +188,12 @@ def test_get_provider_unknown_raises():
         get_provider("gemini", model="whatever")
 
 
+def test_get_provider_forwards_api_key():
+    # A UI-provided key reaches both adapters without any SDK/network call.
+    assert get_provider("anthropic", model="claude-x", api_key="sk-a")._api_key == "sk-a"
+    assert get_provider("openai", model="gpt-x", api_key="sk-o")._api_key == "sk-o"
+
+
 def test_app_clean_dna_strips_fasta_and_whitespace():
     from copilot.app.main import _clean_dna  # module-level, no streamlit needed
 

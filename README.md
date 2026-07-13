@@ -41,7 +41,9 @@ docs/           model cards
 tests/          pytest
 ```
 
-## Run it locally
+> Tested on Linux (WSL) and CI (Ubuntu/Python 3.11). macOS/Windows are
+> unverified — the scientific wheels (ViennaRNA, primer3-py, LightGBM) may need
+> conda rather than pip there.
 
 ```bash
 # 1. Code + environment (Python 3.11)
@@ -56,20 +58,22 @@ pip install -e ".[copilot]"            # base + streamlit + openai + anthropic
 #   BLAST+ (optional, only for the Specificity tab):
 #     conda install -c bioconda blast               # (or apt install ncbi-blast+)
 
-# 3. Build the head-A models (Source A data is committed, so this just works)
-python -m predictor.pipeline.head_a    # -> data/models/head_a_{classifier,regressor}.joblib
-
-# 4. (optional) Build the demo BLAST DB for the Specificity tab
-python scripts/build_ighv_blastdb.py   # -> data/blast/ighv_db   (needs BLAST+)
-
-# 5. Run the app
+# 3. Run the app
 streamlit run copilot/app/main.py      # -> http://localhost:8501
 ```
 
-**What needs what:** the **Score manual primers** and **Specificity** tabs work
-after steps 3 (+4 for specificity) with **no API key**. The **Design (agent)**
-tab additionally needs a provider key in the environment before launching, e.g.
-`export ANTHROPIC_API_KEY=...` (or `OPENAI_API_KEY=...`).
+**First launch builds the head-A models automatically** (~20 s) from the
+committed openPrimeR data — the trained artifacts aren't committed (they're
+reproducible). To build them ahead of time instead:
+`python -m predictor.pipeline.head_a`.
+
+**What needs what:**
+- **Score manual primers** — works immediately, no key. (Needs a template for the
+  annealing features.)
+- **Specificity** — additionally needs BLAST+ and a local DB
+  (`python scripts/build_ighv_blastdb.py`).
+- **Design (agent)** — needs a provider key: paste it into the sidebar **API key**
+  field, or set `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` before launching.
 
 **Head B** (the cross-source generalization benchmark) is optional and separate:
 

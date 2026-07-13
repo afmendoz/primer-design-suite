@@ -197,9 +197,16 @@ class AnthropicProvider:
     exercised by the test suite.
     """
 
-    def __init__(self, model: str, client: Any | None = None, max_tokens: int = 4096) -> None:
+    def __init__(
+        self,
+        model: str,
+        api_key: str | None = None,
+        client: Any | None = None,
+        max_tokens: int = 4096,
+    ) -> None:
         self.model = model
         self.max_tokens = max_tokens
+        self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         self._client = client
         self.system = ""
         self.tools: list[dict[str, Any]] = []
@@ -210,7 +217,7 @@ class AnthropicProvider:
         if self._client is None:
             import anthropic  # lazy: only needed for the real path
 
-            self._client = anthropic.Anthropic()
+            self._client = anthropic.Anthropic(api_key=self._api_key)
         return self._client
 
     def start_conversation(self, system: str, tools: list[dict[str, Any]]) -> None:
