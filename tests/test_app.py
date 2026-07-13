@@ -42,6 +42,16 @@ def test_manual_scoring_tab_scores_primers():
     assert PERFECT in primers and MISMATCH in primers
 
 
+def test_manual_scoring_intrinsic_fallback_without_template():
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    # No template set -> the intrinsic quality path (no ML score).
+    at.text_area(key="primers").set_value(PERFECT)
+    at.button(key="score_btn").click().run()
+    assert not at.exception
+    data = at.dataframe[0].value
+    assert "quality_flags" in data and "P(amplify)" not in data
+
+
 def test_manual_load_example_button_fills_template():
     from copilot.app.main import _DEMO_MANUAL_PRIMERS, _DEMO_TEMPLATE
 

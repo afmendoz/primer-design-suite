@@ -50,6 +50,12 @@ _EXCLUDE_HINT = (
     "The database subject id of the intended target, excluded from the off-target "
     "count. For the IGHV demo DB, use the sanitized allele id, e.g. IGHV1-2_02."
 )
+_DOMAIN_WARNING = (
+    "⚠️ **These scores are only meaningful for IGHV-like designed primers.** The "
+    "models were trained on openPrimeR antibody primers and **cannot detect when a "
+    "primer is out of domain** — a non-IGHV primer still gets a confident-looking "
+    "score. Treat efficiency / P(amplify) for other primers as unvalidated."
+)
 _SPEC_CAVEAT = (
     "⚠️ **An off-target count is only as trustworthy as the database is "
     "representative.** BLAST can only find hits that exist in the DB. This demo DB "
@@ -85,6 +91,7 @@ def render_app() -> None:
 
     from copilot.agent.loop import run_agent_loop
     from copilot.agent.providers import get_provider
+    from primer_core.featurize import featurize_primer
     from primer_core.tools.score import score_dual_head
     from primer_core.tools.specificity import check_specificity
 
@@ -254,24 +261,22 @@ def render_app() -> None:
                     [c.model_dump() for c in result["ranked_output"].candidates],
                     use_container_width=True,
                 )
+                st.warning(_DOMAIN_WARNING)
                 st.subheader("Design memo")
                 st.markdown(result["design_memo"] or "_(no memo returned)_")
 
     # --- Tab 2: score manually-entered primers (no LLM) ----------------------
     with tab_manual:
         st.markdown(
-            "Score primers against the **template in the sidebar** (required for the "
-            "annealing features) — no agent/LLM involved. One primer per line."
+            "Score primers with the head-A models — no agent/LLM involved, one primer "
+            "per line. A **template** (sidebar) unlocks the full ML scores; without one "
+            "you get intrinsic primer-quality metrics only."
         )
         st.button(
             "Load IGHV example (template + primers)",
             on_click=_load_example,
             key="load_manual_example",
         )
-        if not ctx["template_seq"]:
-            st.info(
-                "No template set — paste one in the sidebar, or click the example button above."
-            )
         primers_text = st.text_area(
             "Primers (one per line)",
             placeholder="ATCCTCTTCTTGGTGGCAGC\nCTGAGGTGAAGAAGCCTGGG",
@@ -280,14 +285,11 @@ def render_app() -> None:
         )
         if st.button("Score primers", key="score_btn"):
             primers = [s for s in (_clean_dna(p) for p in primers_text.splitlines()) if s]
-            if not ctx["template_seq"]:
-                st.warning(
-                    "Enter a template sequence in the sidebar (needed for annealing features)."
-                )
-            elif not primers:
+            if not primers:
                 st.warning("Enter at least one primer.")
-            else:
-                rows, caveat = [], None
+            elif ctx["template_seq"]:
+                # Full ML scoring (needs the template for the annealing features).
+                rows = []
                 for p in primers:
                     try:
                         out = score_dual_head(
@@ -300,7 +302,6 @@ def render_app() -> None:
                         rows.append({"primer": p, "error": str(exc)})
                         continue
                     f = out.get("features", {})
-                    caveat = out.get("caveats", [caveat])[0]
                     ci = out.get("efficiency_interval")
                     rows.append(
                         {
@@ -314,12 +315,48 @@ def render_app() -> None:
                         }
                     )
                 st.dataframe(rows, use_container_width=True)
-                if caveat:
-                    st.caption(f"⚠️ {caveat}")
+                st.warning(_DOMAIN_WARNING)
                 st.caption(
                     "P(amplify) is isotonic-calibrated; 'eff 90% interval' is a conformal "
                     "prediction interval — read the interval, not the point estimate."
                 )
+            else:
+                # No template -> intrinsic primer-quality metrics only (no ML score).
+                st.info(
+                    "No template set → **intrinsic primer-quality metrics only**. The ML "
+                    "efficiency / P(amplify) scores need a template (for the primer-template "
+                    "annealing features) — paste one in the sidebar to unlock them."
+                )
+                rows = []
+                for p in primers:
+                    try:
+                        f = featurize_primer(p)  # intrinsic features only
+                    except Exception as exc:  # noqa: BLE001 - report per primer
+                        rows.append({"primer": p, "error": str(exc)})
+                        continue
+                    flags = []
+                    if not (55 <= f["tm"] <= 65):
+                        flags.append("Tm out of 55-65C")
+                    if not (0.4 <= f["gc_content"] <= 0.6):
+                        flags.append("GC out of 40-60%")
+                    if f["gc_clamp"] < 1:
+                        flags.append("no GC clamp")
+                    if f["homodimer_dg"] < -6:
+                        flags.append("self-dimer risk")
+                    if f["hairpin_dg"] < -2:
+                        flags.append("hairpin risk")
+                    rows.append(
+                        {
+                            "primer": p,
+                            "Tm": round(f["tm"], 1),
+                            "GC%": round(100 * f["gc_content"]),
+                            "gc_clamp": int(f["gc_clamp"]),
+                            "hairpin_dg": round(f["hairpin_dg"], 2),
+                            "homodimer_dg": round(f["homodimer_dg"], 2),
+                            "quality_flags": ", ".join(flags) or "ok",
+                        }
+                    )
+                st.dataframe(rows, use_container_width=True)
 
     # --- Tab 3: BLAST specificity demo (local IGHV DB) -----------------------
     with tab_spec:
