@@ -16,6 +16,7 @@ Run inside the ``primer`` env after the models are built::
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import joblib
@@ -24,6 +25,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 from sklearn.calibration import calibration_curve  # noqa: E402
 from sklearn.metrics import brier_score_loss  # noqa: E402
 
@@ -127,6 +130,64 @@ def importance_figure():
     return names[-1]
 
 
+def transfer_figure(report_path="data/reports/head_b.json"):
+    """Head B train-on-X / test-on-Y Spearman heatmap (domain-shift, pairwise)."""
+    p = Path(report_path)
+    if not p.exists():
+        print(f"skip transfer figure: {report_path} not found (run predictor.pipeline.head_b)")
+        return None
+    rep = json.loads(p.read_text())
+    mat = rep.get("transfer_matrix")
+    if not mat:
+        print("skip transfer figure: report has no transfer_matrix (re-run head_b)")
+        return None
+    sources = list(mat)
+    labels = [s.replace("_et_al", "") for s in sources]
+    M = np.array([[mat[a][b] for b in sources] for a in sources], dtype=float)
+
+    # diverging: accent (negative transfer) -> neutral (0) -> ink (strong transfer)
+    cmap = LinearSegmentedColormap.from_list("transfer", [ACCENT, "#f4f6fb", INK])
+    norm = TwoSlopeNorm(vmin=min(-0.05, M.min()), vcenter=0.0, vmax=max(0.05, M.max()))
+
+    fig, ax = plt.subplots(figsize=(5.9, 5.2), dpi=150)
+    im = ax.imshow(M, cmap=cmap, norm=norm, aspect="equal")
+    ax.set_xticks(range(len(labels)), labels, rotation=45, ha="right", fontsize=9, color=INK)
+    ax.set_yticks(range(len(labels)), labels, fontsize=9, color=INK)
+    ax.set_xlabel("tested on  →", color=INK, fontsize=10)
+    ax.set_ylabel("←  trained on", color=INK, fontsize=10)
+    ax.set_title(
+        "Head B — efficiency transfers within a source, not across",
+        color=INK,
+        fontsize=11.5,
+        weight="bold",
+        pad=12,
+    )
+    for i in range(len(sources)):
+        for j in range(len(sources)):
+            v = M[i, j]
+            rgba = cmap(norm(v))
+            lum = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
+            ax.text(
+                j,
+                i,
+                f"{v:.2f}",
+                ha="center",
+                va="center",
+                fontsize=8.5,
+                color="white" if lum < 0.55 else INK,
+                fontfamily="monospace",
+            )
+        ax.add_patch(Rectangle((i - 0.5, i - 0.5), 1, 1, fill=False, ec=INK, lw=2))
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Spearman", color=INK, fontsize=9)
+    cbar.ax.tick_params(colors=INK, labelsize=8)
+    ax.tick_params(colors=INK)
+    fig.tight_layout()
+    fig.savefig(OUT / "transfer_head_b.png", bbox_inches="tight")
+    plt.close(fig)
+    return rep.get("transfer_diag_mean"), rep.get("transfer_offdiag_mean")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     tbl = build_feature_table()
@@ -138,6 +199,9 @@ def main():
     print(f"calibration: {best}  Brier={brier:.3f} ECE={ece:.3f}")
     print(f"top efficiency feature: {top}")
     print(f"wrote {OUT}/calibration_head_a.png, {OUT}/feature_importance_head_a.png")
+    tr = transfer_figure()
+    if tr:
+        print(f"transfer: diag={tr[0]:.3f} offdiag={tr[1]:.3f}  wrote {OUT}/transfer_head_b.png")
 
 
 if __name__ == "__main__":

@@ -37,6 +37,19 @@ constraint is itself the clearest evidence of the domain gap vs Source A.
 (GCall 0.15, GCfix 0.07, Choi **−0.15**, Erlich 0.34, Gao 0.43, Koch 0.07,
 Song 0.17).
 
+**Transfer matrix (train on one source, test on each source, xgboost):** the
+same story made pairwise. A single fixed per-source hold-out makes every cell
+comparable — the boxed diagonal is honest *within*-source generalization, the
+rest is cross-source transfer.
+
+![Head B transfer matrix](figures/transfer_head_b.png)
+
+**Mean diagonal 0.32 vs mean off-diagonal 0.04** — efficiency signal barely
+survives a source change. The structure is real, not noise: Erlich and Gao
+transfer strongly to *each other* (0.55–0.66) while Choi is adversarial to them
+(−0.34), so "PCR efficiency" is partly a per-experiment quantity, not a single
+universal function of sequence.
+
 **The internal (0.32) vs cross-source (0.15, one source negative) gap is the
 domain-shift signal.**
 

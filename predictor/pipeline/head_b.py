@@ -79,6 +79,37 @@ def run_generalization(tbl, model_name="xgboost") -> dict[str, dict[str, float]]
     return out
 
 
+def run_transfer_matrix(
+    tbl, model_name="xgboost", test_frac=0.3, seed=0
+) -> dict[str, dict[str, float]]:
+    """Full train-on-source-X / test-on-source-Y Spearman matrix.
+
+    A single fixed per-source hold-out makes every cell comparable and leakage-
+    free: the diagonal (train X_train -> test X_test) is honest *within*-source
+    generalization, the off-diagonal is cross-source transfer. The contrast
+    between the diagonal and its row is the domain-shift signal, made pairwise.
+    """
+    rng = np.random.default_rng(seed)
+    X = tbl[FEATURES].to_numpy(float)
+    y = tbl["eff"].to_numpy(float)
+    src = tbl["source"].to_numpy()
+    train_idx, test_idx = {}, {}
+    for s in SOURCES:
+        idx = rng.permutation(np.flatnonzero(src == s))
+        cut = int(len(idx) * (1.0 - test_frac))
+        train_idx[s], test_idx[s] = idx[:cut], idx[cut:]
+
+    matrix = {}
+    for s_tr in SOURCES:
+        est = get_model(model_name, _REG_PARAMS[model_name])
+        est.fit(X[train_idx[s_tr]], y[train_idx[s_tr]])
+        matrix[s_tr] = {
+            s_te: float(spearmanr(y[test_idx[s_te]], est.predict(X[test_idx[s_te]])).correlation)
+            for s_te in SOURCES
+        }
+    return matrix
+
+
 def main() -> None:
     tbl = build_feature_table()
     X = tbl[FEATURES].to_numpy(float)
@@ -101,6 +132,21 @@ def main() -> None:
         print(f"{s:<16}{d['spearman']:>10.3f}{d['rmse']:>9.4f}")
     mean_sp = float(np.mean([d["spearman"] for d in gen.values()]))
     best_int = max(internal, key=lambda m: internal[m]["spearman"])
+
+    print("\n== Transfer matrix (train source -> test source, Spearman, xgboost) ==")
+    matrix = run_transfer_matrix(tbl)
+    hdr = "".join(f"{s[:5]:>7}" for s in SOURCES)
+    corner = "train\\test"
+    print(f"{corner:<12}{hdr}")
+    for s_tr in SOURCES:
+        row = "".join(f"{matrix[s_tr][s_te]:>7.2f}" for s_te in SOURCES)
+        print(f"{s_tr:<12}{row}")
+    diag = float(np.mean([matrix[s][s] for s in SOURCES]))
+    offdiag = float(np.mean([matrix[a][b] for a in SOURCES for b in SOURCES if a != b]))
+    print(
+        f"mean diagonal (within-source) = {diag:.3f}  |  mean off-diagonal (cross) = {offdiag:.3f}"
+    )
+
     report = {
         "source": "eth_pcr_bias",
         "n_rows": int(len(tbl)),
@@ -110,6 +156,9 @@ def main() -> None:
         "cross_source_loso": gen,
         "mean_cross_source_spearman": mean_sp,
         "best_internal_model": best_int,
+        "transfer_matrix": matrix,
+        "transfer_diag_mean": diag,
+        "transfer_offdiag_mean": offdiag,
         "note": "internal vs cross-source gap is the domain-shift signal",
     }
     Path("data/reports").mkdir(parents=True, exist_ok=True)

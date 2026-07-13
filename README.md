@@ -72,6 +72,18 @@ plainly, not hidden.
 > Regenerate the figures with `python scripts/make_figures.py` (needs the
 > `dev` extra) after the models are built.
 
+**Head B — the generalization story.** Train on one ETH source, test on every
+source. The boxed diagonal is within-source generalization; the rest is
+cross-source transfer. Mean diagonal **0.32** vs mean off-diagonal **0.04** —
+efficiency signal barely survives a source change, and the structure is real
+(Erlich↔Gao transfer at 0.55–0.66; Choi is adversarial at −0.34). This domain
+shift is the point of Head B, not a defect to hide — details in
+[`docs/model_card_head_b.md`](docs/model_card_head_b.md).
+
+<p align="center">
+  <img src="docs/figures/transfer_head_b.png" alt="Head B cross-source transfer matrix (train source vs test source, Spearman)" width="62%">
+</p>
+
 ## Layout
 
 ```
@@ -106,6 +118,17 @@ pip install -e ".[copilot]"            # base + streamlit + openai + anthropic
 # 3. Run the app
 streamlit run copilot/app/main.py      # -> http://localhost:8501
 ```
+
+**Or with Docker** — no conda, no system-dependency wrangling:
+
+```bash
+docker build -t primer-design-suite .
+docker run --rm -p 8501:8501 primer-design-suite            # -> http://localhost:8501
+#   Design (agent) tab needs a key:  -e OPENAI_API_KEY=sk-...
+```
+
+The image bundles `libgomp1` + BLAST+, installs `.[copilot]`, and launches the
+app; the head-A models still build on first launch from the committed data.
 
 **First launch builds the head-A models automatically** (~20 s) from the
 committed openPrimeR data — the trained artifacts aren't committed (they're
