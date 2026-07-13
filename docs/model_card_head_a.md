@@ -36,13 +36,20 @@ GC 1.00, length 1.00, Tm 0.86, self-dimer 0.79; annealing ΔG **0.81** vs their
 
 **SHAP top features:** `mismatch_count`, `annealing_dg`, `homodimer_dg`,
 `three_prime_end_dg`, `hairpin_dg` — biologically sensible (passes the expected
-biological sanity check).
+biological sanity check). Impurity importance of the deployed efficiency head
+tells the same story (`gc_clamp` ≈ 0 is the pre-filtering ceiling, made visible):
+
+![Head A feature importance](figures/feature_importance_head_a.png)
 
 ## Calibration & uncertainty
 - **Classification is well-calibrated.** On grouped-CV out-of-fold predictions,
   LightGBM has **Brier 0.009** and **ECE ~0.01** — a predicted `P(amplify)` is
   trustworthy as a probability to ~1%. The saved classifier is additionally
-  **isotonic-calibrated** (`CalibratedClassifierCV`).
+  **isotonic-calibrated** (`CalibratedClassifierCV`). The reliability diagram
+  (predictions are bimodal, so the mass sits at the extremes — see the
+  histogram) lands on the diagonal:
+
+  ![Head A calibration](figures/calibration_head_a.png)
 - **Regression carries a prediction interval, not a false-precision point.**
   Split-conformal on OOF residuals gives a **90% interval of ±0.027** for
   RandomForest (stored as `conformal_q90`); `score_candidate` returns

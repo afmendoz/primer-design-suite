@@ -29,7 +29,7 @@ dependencies = [
 [project.optional-dependencies]
 predictor = ["torch", "snakemake", "mlflow"]
 copilot = ["anthropic", "openai", "streamlit"]  # both providers + the Streamlit app
-dev = ["pytest", "ruff", "black"]
+dev = ["pytest", "ruff", "black", "matplotlib"]  # matplotlib: scripts/make_figures.py
 
 [tool.setuptools.packages.find]
 include = ["primer_core*", "predictor*", "copilot*"]

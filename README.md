@@ -27,6 +27,51 @@ any standalone script call the exact same feature and tool functions
 (`primer_core.featurize.featurize_primer` is the one featurizer). The project
 follows a consistent set of scientific and coding conventions throughout.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph data["Licensed datasets"]
+    A["openPrimeR IGHV<br/>CC BY 4.0"]
+    B["ETH PCR-bias<br/>BSD-3"]
+  end
+  A --> F["primer_core<br/>shared featurizer"]
+  B --> F
+  F --> HA["Head A<br/>classify + regress<br/><i>in-domain</i>"]
+  F --> HB["Head B<br/>cross-source<br/><i>generalization</i>"]
+  subgraph cop["copilot agent"]
+    C["orchestrate real tools<br/>Primer3 · BLAST · thermo"]
+  end
+  HA -->|"score_candidate"| C
+  C --> O["ranked JSON<br/>+ design memo"]
+```
+
+## Results at a glance
+
+Head A, grouped cross-validation on the openPrimeR IGHV set (full metrics and
+the two-source split in [`docs/model_card_head_a.md`](docs/model_card_head_a.md)):
+
+| view (grouped CV) | PR-AUC | ROC-AUC | Spearman | RMSE |
+|---|---|---|---|---|
+| unseen **templates** (optimistic) | 0.99 | 1.00 | 0.82 | 0.07 |
+| unseen **primers** (honest — the number we quote) | 0.83 | 0.98 | 0.71 | 0.15 |
+
+The classifier is **isotonic-calibrated** (Brier 0.009, ECE ~0.01), and the
+regressor ships a **±0.03 conformal interval** — so `score_candidate` returns a
+trustworthy probability and an honest band, not a false-precision point. SHAP
+lands on the biology (`mismatch_count`, `annealing_dg`), and `gc_clamp` ≈ 0
+because the training primers were pre-filtered for it — a limitation stated
+plainly, not hidden.
+
+<p align="center">
+  <img src="docs/figures/calibration_head_a.png" alt="Head A calibration — reliability diagram with prediction histogram" width="45%">
+  &nbsp;&nbsp;
+  <img src="docs/figures/feature_importance_head_a.png" alt="Head A efficiency feature importance" width="45%">
+</p>
+
+> Regenerate the figures with `python scripts/make_figures.py` (needs the
+> `dev` extra) after the models are built.
+
 ## Layout
 
 ```
